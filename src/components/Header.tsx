@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { TrendingUp, Wallet, RefreshCw, Bot, Info } from 'lucide-react';
+import { TrendingUp, Wallet, RefreshCw, Bot, Info, BookOpen } from 'lucide-react';
 import { Coin } from '../types';
 
 interface HeaderProps {
@@ -17,6 +17,8 @@ interface HeaderProps {
   onResetAccount: () => void;
   selectedTimeframe: string;
   onSelectTimeframe: (tf: string) => void;
+  onTriggerAdEarn: () => void;
+  onTriggerTutorial: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -29,6 +31,8 @@ export const Header: React.FC<HeaderProps> = ({
   onResetAccount,
   selectedTimeframe,
   onSelectTimeframe,
+  onTriggerAdEarn,
+  onTriggerTutorial,
 }) => {
   const accountEquity = walletBalance + openPositionsPnl;
   const positionsPnlIsPositive = openPositionsPnl >= 0;
@@ -103,20 +107,28 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Account Balance Widget */}
-      <div id="header-balance-widget" className="flex items-center bg-[#0a0a0b] border border-zinc-800 rounded-lg px-4 py-2 gap-5 shrink-0 ml-auto xl:ml-0 shadow-inner">
+      <div id="header-balance-widget" className="grid grid-cols-2 md:flex md:items-center bg-[#0a0a0b] border border-zinc-800 rounded-xl p-3 md:py-2 md:px-4 gap-4 md:gap-5 shrink-0 w-full md:w-auto shadow-inner ml-auto xl:ml-0">
         {/* Wallet Balance */}
         <div id="wallet-balance-box">
           <div className="text-[9px] text-zinc-500 uppercase tracking-wider font-sans flex items-center gap-1">
             <Wallet className="w-2.5 h-2.5 text-indigo-400" />
             Wallet
           </div>
-          <div className="font-mono text-xs font-semibold text-white mt-0.5">
-            ${walletBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          <div className="font-mono text-xs font-semibold text-white mt-0.5 flex items-center gap-1.5">
+            <span>${walletBalance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            <button
+              id="btn-trigger-ad-earn"
+              onClick={onTriggerAdEarn}
+              className="w-4 h-4 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 flex items-center justify-center font-bold text-[11px] leading-none transition-transform active:scale-90 cursor-pointer"
+              title="Watch Ad & Earn $100 Free Practice Capital!"
+            >
+              +
+            </button>
           </div>
         </div>
 
         {/* Account Equity (Wallet + PnL) */}
-        <div id="equity-box" className="border-l border-zinc-800 pl-4">
+        <div id="equity-box" className="border-l border-zinc-850 pl-4">
           <div className="text-[9px] text-zinc-500 uppercase tracking-wider font-sans">
             Equity
           </div>
@@ -126,7 +138,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Running PnL */}
-        <div id="running-pnl-box" className="border-l border-zinc-800 pl-4">
+        <div id="running-pnl-box" className="border-zinc-850 border-t pt-2 md:pt-0 md:border-t-0 md:border-l md:pl-4">
           <div className="text-[9px] text-zinc-500 uppercase tracking-wider font-sans">
             Active PnL
           </div>
@@ -136,7 +148,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Margin Risk */}
-        <div id="margin-ratio-box" className="border-l border-zinc-800 pl-4">
+        <div id="margin-ratio-box" className="border-zinc-850 border-t pt-2 md:pt-0 md:border-t-0 md:border-l md:pl-4">
           <div className="text-[9px] text-zinc-500 uppercase tracking-wider font-sans">
             Margin Risk
           </div>
@@ -148,14 +160,26 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
+        {/* Academy Tutorial Trigger */}
+        <button
+          id="btn-academy-tour-launch"
+          onClick={onTriggerTutorial}
+          title="Start Interactive Trading Tour"
+          className="col-span-2 md:col-span-1 flex items-center justify-center p-1.5 px-3 rounded bg-indigo-600 hover:bg-indigo-500 text-white font-sans text-xs font-semibold hover:border-zinc-700 transition cursor-pointer mt-1 md:mt-0 shadow-md gap-1 bg-gradient-to-r from-indigo-700 to-indigo-600 border border-indigo-500"
+        >
+          <BookOpen className="w-3.5 h-3.5" />
+          <span>Academy Tutorial</span>
+        </button>
+
         {/* Reset Trigger */}
         <button
           id="btn-account-reset"
           onClick={onResetAccount}
-          title="Reset Virtual USD Wallet to $10,000"
-          className="flex items-center justify-center p-1.5 rounded bg-[#121214] border border-zinc-850 text-zinc-400 hover:text-white hover:border-zinc-700 transition cursor-pointer ml-1 animate-pulse"
+          title="Reset Virtual USD Wallet to $200"
+          className="col-span-2 md:col-span-1 flex items-center justify-center p-1.5 rounded bg-[#121214] border border-zinc-850 text-zinc-400 hover:text-white hover:border-zinc-700 transition cursor-pointer mt-1 md:mt-0 animate-pulse text-[10px]"
         >
-          <RefreshCw className="w-3.5 h-3.5" />
+          <RefreshCw className="w-3.5 h-3.5 md:mr-0 mr-1.5" />
+          <span className="md:hidden">Reset Simulator Sandbox</span>
         </button>
       </div>
     </header>

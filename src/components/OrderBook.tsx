@@ -46,7 +46,7 @@ export const OrderBook: React.FC<OrderBookProps> = ({
   };
 
   return (
-    <div id="orderbook-panel-widget" className="bg-[#121214] border border-zinc-800 rounded-xl p-4 flex flex-col md:w-[320px] shrink-0 text-zinc-100 font-sans shadow-lg gap-4">
+    <div id="orderbook-panel-widget" className="bg-[#121214] border border-zinc-800 rounded-xl p-4 flex flex-col w-full shrink-0 text-zinc-100 font-sans shadow-lg gap-4">
       {/* Container header block */}
       <div id="orderbook-header" className="flex items-center gap-2 border-b border-zinc-850 pb-2">
         <Layers className="w-4 h-4 text-indigo-400" />

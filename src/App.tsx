@@ -10,6 +10,7 @@ import { TradingPanel } from './components/TradingPanel';
 import { OrderBook } from './components/OrderBook';
 import { PositionsTable } from './components/PositionsTable';
 import { AIAnalyst } from './components/AIAnalyst';
+import { InteractiveTutorial } from './components/InteractiveTutorial';
 import { Coin, Candle, Position, PositionType, LimitOrder, TradeLog, OrderBookEntry, Timeframe } from './types';
 import { generateHistory, addTick, generateOrderBook, STANDARD_COINS } from './utils/marketSim';
 import { AlertCircle, CheckCircle2, TrendingUp, HelpCircle, RefreshCcw } from 'lucide-react';
@@ -29,8 +30,60 @@ export default function App() {
   // Persistent User Holdings & Ledger state
   const [walletBalance, setWalletBalance] = useState<number>(() => {
     const saved = localStorage.getItem('sim_wallet_balance');
-    return saved ? parseFloat(saved) : 10000.00;
+    if (saved === '10000' || saved === '10000.00') {
+      return 200.00;
+    }
+    return saved ? parseFloat(saved) : 200.00;
   });
+
+  // Onboarding Academy Interactive Tour State
+  const [tutorialStep, setTutorialStep] = useState<number>(() => {
+    const completed = localStorage.getItem('tutorial_completed');
+    return completed === 'true' ? -1 : 0; // auto-start on first loading session, otherwise manual
+  });
+
+  // Ads & Practice Funding configuration
+  const [showAdModal, setShowAdModal] = useState<boolean>(false);
+  const [adCountdown, setAdCountdown] = useState<number>(5);
+  const [adClaimable, setAdClaimable] = useState<boolean>(false);
+  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const startAdPlay = () => {
+    setShowAdModal(true);
+    setAdCountdown(5);
+    setAdClaimable(false);
+    
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+    }
+    
+    countdownIntervalRef.current = setInterval(() => {
+      setAdCountdown(prev => {
+        if (prev <= 1) {
+          if (countdownIntervalRef.current) {
+            clearInterval(countdownIntervalRef.current);
+          }
+          setAdClaimable(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const handleClaimAdReward = () => {
+    setWalletBalance(prev => prev + 100.00);
+    setShowAdModal(false);
+    triggerAlert('Ad complete! Successfully credited +$100.00 practice balance to your wallet.', 'success');
+  };
+
+  useEffect(() => {
+    return () => {
+      if (countdownIntervalRef.current) {
+        clearInterval(countdownIntervalRef.current);
+      }
+    };
+  }, []);
 
   const [positions, setPositions] = useState<Position[]>(() => {
     const saved = localStorage.getItem('sim_positions');
@@ -458,13 +511,20 @@ export default function App() {
   };
 
   const handleResetAccount = () => {
-    if (confirm('Are you sure you want to reset your trading sandbox? All active positions and logs will be archived.')) {
-      setWalletBalance(10000.00);
+    if (confirm('Are you sure you want to reset your practice account? All active positions and logs will be archived.')) {
+      setWalletBalance(200.00);
       setPositions([]);
       setLimitOrders([]);
       setTradeLogs([]);
-      triggerAlert('Trading simulator restored to stock parameters ($10,000 USD)', 'success');
+      triggerAlert('Practice terminal restored to fallback parameters ($200.00 USD)', 'success');
     }
+  };
+
+  const handleCompleteTutorial = () => {
+    setWalletBalance(prev => prev + 100.00);
+    setTutorialStep(-1);
+    localStorage.setItem('tutorial_completed', 'true');
+    triggerAlert('🎓 Academy complete! Successfully credited +$100.00 practice balance to your wallet.', 'success');
   };
 
   // --- STATISTICAL MEMO CALCULATORS ---
@@ -525,55 +585,67 @@ export default function App() {
         onResetAccount={handleResetAccount}
         selectedTimeframe={timeframe}
         onSelectTimeframe={setTimeframe}
+        onTriggerAdEarn={startAdPlay}
+        onTriggerTutorial={() => setTutorialStep(0)}
       />
 
       {/* Primary Workspace Layout */}
       {activeCoin ? (
-        <main id="main-terminal-body" className="flex-1 w-full max-w-[1440px] mx-auto px-6 py-5 flex flex-col lg:flex-row gap-5">
+        <main id="main-terminal-body" className="flex-1 w-full max-w-[1440px] mx-auto px-4 sm:px-6 py-4 sm:py-5 flex flex-col lg:flex-row gap-5">
           
           {/* LEFT SUBGRID COLUMN (Large Canvas Charts & Positions) */}
-          <div id="terminal-left-column" className="flex-1 flex flex-col gap-5 min-w-0">
+          <div id="terminal-left-column" className="flex-1 flex flex-col gap-5 min-w-0 w-full">
             {/* Custom SVG Candlestick Widget */}
-            <ChartSection
-              candles={candles}
-              activeCoin={activeCoin}
-              timeframe={timeframe}
-              onTimeframeChange={setTimeframe}
-            />
+            <div id="wrapper-chart-glow" className={`transition-all duration-300 rounded-xl ${tutorialStep === 1 ? 'ring-4 ring-indigo-500 animate-pulse border-indigo-400 z-120 relative' : ''}`}>
+              <ChartSection
+                candles={candles}
+                activeCoin={activeCoin}
+                timeframe={timeframe}
+                onTimeframeChange={setTimeframe}
+              />
+            </div>
 
             {/* Positions detail and ledger tables */}
-            <PositionsTable
-              positions={positions}
-              limitOrders={limitOrders}
-              tradeLogs={tradeLogs}
-              onClosePosition={handleClosePosition}
-              onCancelOrder={handleCancelOrder}
-            />
+            <div id="wrapper-positions-glow" className={`transition-all duration-300 rounded-xl ${tutorialStep === 5 ? 'ring-4 ring-indigo-500 animate-pulse border-indigo-400 z-120 relative' : ''}`}>
+              <PositionsTable
+                positions={positions}
+                limitOrders={limitOrders}
+                tradeLogs={tradeLogs}
+                onClosePosition={handleClosePosition}
+                onCancelOrder={handleCancelOrder}
+              />
+            </div>
           </div>
 
           {/* RIGHT SIDEBAR DRAWER (Order input form, Depth order book, AI analysis reports) */}
-          <div id="terminal-right-column" className="w-full lg:w-[325px] shrink-0 flex flex-col md:flex-row lg:flex-col gap-5">
+          <div id="terminal-right-column" className="w-full lg:w-[325px] shrink-0 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-5">
             {/* Margin Order execution form */}
-            <TradingPanel
-              activeCoin={activeCoin}
-              walletBalance={walletBalance}
-              onOpenPosition={handleOpenPosition}
-            />
+            <div id="wrapper-trading-glow" className={`w-full transition-all duration-300 rounded-xl ${tutorialStep === 3 || tutorialStep === 4 ? 'ring-4 ring-indigo-500 animate-pulse border-indigo-400 z-120 relative' : ''}`}>
+              <TradingPanel
+                activeCoin={activeCoin}
+                walletBalance={walletBalance}
+                onOpenPosition={handleOpenPosition}
+              />
+            </div>
 
             {/* Live Order Book depth maps sidebar */}
-            <OrderBook
-              bids={bids}
-              asks={asks}
-              activeCoin={activeCoin}
-              recentTrades={recentTrades}
-            />
+            <div id="wrapper-orderbook-glow" className={`w-full transition-all duration-300 rounded-xl ${tutorialStep === 2 ? 'ring-4 ring-indigo-500 animate-pulse border-indigo-400 z-120 relative' : ''}`}>
+              <OrderBook
+                bids={bids}
+                asks={asks}
+                activeCoin={activeCoin}
+                recentTrades={recentTrades}
+              />
+            </div>
 
             {/* Gemini Technical Advisory strategist card */}
-            <AIAnalyst
-              activeCoin={activeCoin}
-              candles={candles}
-              timeframe={timeframe}
-            />
+            <div className="w-full md:col-span-2 lg:col-span-1">
+              <AIAnalyst
+                activeCoin={activeCoin}
+                candles={candles}
+                timeframe={timeframe}
+              />
+            </div>
           </div>
         </main>
       ) : (
@@ -589,6 +661,93 @@ export default function App() {
           </p>
         </div>
       )}
+
+      {/* Simulated Premium Ad Player Modal */}
+      {showAdModal && (
+        <div id="ad-sponsor-modal" className="fixed inset-0 bg-[#020204]/90 z-100 flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in animate-duration-200">
+          <div className="bg-[#121214] border border-zinc-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl flex flex-col gap-5 text-center relative overflow-hidden">
+            
+            {/* Header / Timer info bar */}
+            <div className="flex items-center justify-between border-b border-zinc-850 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-ping"></span>
+                <span className="text-[10px] font-mono tracking-widest text-zinc-400 uppercase font-bold">SPONSOR INTERACTIVE FEED</span>
+              </div>
+              <span className="text-xs font-mono px-2.5 py-1 rounded bg-[#0a0a0b] text-zinc-400 border border-zinc-850">
+                {adCountdown > 0 ? `Claimable in ${adCountdown}s` : 'Ad Complete! 🎉'}
+              </span>
+            </div>
+
+            {/* Simulated Live Google Ad Frame with AdSense publisher values */}
+            <div className="bg-[#0a0a0b] border border-zinc-850 rounded-xl p-6 min-h-[220px] flex flex-col justify-between relative overflow-hidden">
+              <div className="absolute top-2 right-3 text-[8px] font-mono font-bold tracking-widest text-zinc-650 uppercase">
+                Ad Network Slot • ca-pub-5861536854329756
+              </div>
+
+              {/* Dynamic decorative banner graphics representing trading software sponsors */}
+              <div className="flex-1 flex flex-col items-center justify-center gap-2.5 py-4">
+                <div className="w-12 h-12 bg-indigo-600/10 rounded-xl border border-indigo-500/20 flex items-center justify-center text-indigo-400 text-lg font-bold">
+                  ⚡
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-zinc-100 font-sans tracking-tight">LuminaEX Technical Alpha Package</h3>
+                  <p className="text-[11px] text-zinc-500 mt-1 max-w-[340px] mx-auto leading-relaxed">
+                    Auto-reconciliation signals, instant leveraged compounding overlays, and priority real-time node pathways.
+                  </p>
+                </div>
+                {/* Real hidden element containing the requested pagead2 script to guarantee native delivery of asset requests */}
+                <ins className="adsbygoogle"
+                     style={{ display: 'block', width: '0px', height: '0px', opacity: 0 }}
+                     data-ad-client="ca-pub-5861536854329756"
+                     data-ad-slot="practice-wallet-topup"
+                     data-ad-format="auto"
+                     data-full-width-responsive="true"></ins>
+              </div>
+
+              {/* Simulated Loading/Playing State line indicator */}
+              <div className="w-full bg-zinc-900 rounded-full h-1 overflow-hidden">
+                <div 
+                  className="bg-indigo-500 h-full transition-all duration-1000 ease-linear" 
+                  style={{ width: `${((5 - adCountdown) / 5) * 100}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-4">
+              <button
+                type="button"
+                onClick={() => setShowAdModal(false)}
+                className="flex-1 py-2 px-4 rounded-xl border border-zinc-800 text-zinc-400 text-xs font-semibold hover:bg-zinc-900 hover:text-zinc-200 transition cursor-pointer"
+              >
+                Skip ad
+              </button>
+              
+              <button
+                type="button"
+                disabled={!adClaimable}
+                onClick={handleClaimAdReward}
+                className={`flex-1 py-2 px-4 rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow-md cursor-pointer ${
+                  adClaimable
+                    ? 'bg-emerald-400 text-slate-950 hover:bg-emerald-300 font-extrabold scale-[1.02]'
+                    : 'bg-zinc-800 text-zinc-500 cursor-not-allowed opacity-50'
+                }`}
+              >
+                Claim $100.00 cash
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Interactive step-by-step onboarding tutorial overlay */}
+      <InteractiveTutorial
+        currentStep={tutorialStep}
+        onStepChange={setTutorialStep}
+        onComplete={handleCompleteTutorial}
+        onSkip={() => setTutorialStep(-1)}
+        walletBalance={walletBalance}
+      />
     </div>
   );
 }

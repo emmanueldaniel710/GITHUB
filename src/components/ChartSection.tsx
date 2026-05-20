@@ -36,10 +36,13 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
   
   const svgRef = useRef<SVGSVGElement | null>(null);
 
-  // Focus on the last 50 candles for readability
+  // Focus on a customizable range of candles for zoom control
+  const [zoomLevel, setZoomLevel] = useState<number>(50);
+
   const visibleCandles = useMemo(() => {
-    return candles.slice(-50);
-  }, [candles]);
+    const clampLevel = Math.max(15, Math.min(zoomLevel, 110));
+    return candles.slice(-clampLevel);
+  }, [candles, zoomLevel]);
 
   // Dimensions of primary and secondary grids
   const chartWidth = 900;
@@ -52,7 +55,16 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
 
   // Track min and max indices to draw accurate grid boundaries
   const priceRange = useMemo(() => {
-    if (visibleCandles.length === 0) return { min: 100, max: 200, scaleY: 1 };
+    const currentPrice = parseFloat(activeCoin.priceUsd) || 100;
+    if (visibleCandles.length === 0) {
+      const finalMin = currentPrice * 0.95;
+      const finalMax = currentPrice * 1.05;
+      return {
+        min: finalMin,
+        max: finalMax,
+        delta: finalMax - finalMin || 1,
+      };
+    }
     
     let maxVal = -Infinity;
     let minVal = Infinity;
@@ -63,7 +75,6 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
     });
 
     // Also include AI predicted bounds in view if close to price range
-    const currentPrice = parseFloat(activeCoin.priceUsd) || 0;
     const padFactor = 0.02; // 2% padding spacing
     let finalMin = minVal * (1 - padFactor);
     let finalMax = maxVal * (1 + padFactor);
@@ -72,7 +83,7 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
     return {
       min: finalMin,
       max: finalMax,
-      delta: finalMax - finalMin,
+      delta: finalMax - finalMin || 1,
     };
   }, [visibleCandles, activeCoin]);
 
@@ -83,9 +94,12 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
 
   // Compute absolute Y coordinate on canvas for a given price
   const getY = (price: number): number => {
-    if (priceRange.delta === 0) return marginOffset.top;
-    const ratio = (price - priceRange.min) / priceRange.delta;
-    return marginOffset.top + mainChartHeight - (ratio * mainChartHeight);
+    const delta = priceRange.delta || 100;
+    const min = priceRange.min || 100;
+    if (delta === 0) return marginOffset.top;
+    const ratio = (price - min) / delta;
+    const yVal = marginOffset.top + mainChartHeight - (ratio * mainChartHeight);
+    return isNaN(yVal) ? marginOffset.top : yVal;
   };
 
   // Compute absolute X coordinate for candle index
@@ -164,9 +178,11 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
   // Vertical and Horizontal grid markers
   const horizontalGridPrices = useMemo(() => {
     const prices: number[] = [];
-    const step = priceRange.delta / 4;
+    const delta = priceRange.delta || 100;
+    const min = priceRange.min || 100;
+    const step = delta / 4;
     for (let i = 1; i <= 3; i++) {
-      prices.push(priceRange.min + i * step);
+      prices.push(min + i * step);
     }
     return prices;
   }, [priceRange]);
@@ -263,6 +279,35 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
             <Activity className="w-3 h-3 text-sky-400" />
             <span className="text-[9px] uppercase font-mono">RSI</span>
           </button>
+
+          <div className="h-4 w-[1px] bg-zinc-805 mx-1 hidden sm:block"></div>
+
+          {/* Interactive Zoom Controller */}
+          <div className="flex bg-[#0a0a0b] border border-zinc-855 rounded-lg p-0.5 text-xs font-mono ml-0.5 shrink-0">
+            <button
+              id="btn-chart-zoom-in"
+              type="button"
+              onClick={() => setZoomLevel((prev) => Math.max(15, prev - 10))}
+              title="Zoom In (Decrease candles in view)"
+              className="px-2 py-0.5 rounded text-indigo-400 hover:text-white font-extrabold cursor-pointer hover:bg-zinc-800 transition text-[11px]"
+              disabled={zoomLevel <= 15}
+            >
+              +
+            </button>
+            <span className="px-1 text-[8px] text-zinc-500 self-center uppercase font-mono select-none">
+              Zoom
+            </span>
+            <button
+              id="btn-chart-zoom-out"
+              type="button"
+              onClick={() => setZoomLevel((prev) => Math.min(110, prev + 10))}
+              title="Zoom Out (Increase candles in view)"
+              className="px-2 py-0.5 rounded text-indigo-400 hover:text-white font-extrabold cursor-pointer hover:bg-zinc-800 transition text-[11px]"
+              disabled={zoomLevel >= 110}
+            >
+              &minus;
+            </button>
+          </div>
         </div>
       </div>
 
@@ -381,39 +426,43 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
           })}
 
           {/* Active Live Price Level Tracker Bar */}
-          <line
-            id="live-trend-grid-line"
-            x1={marginOffset.left}
-            y1={currentPriceY}
-            x2={marginOffset.left + chartWidth}
-            y2={currentPriceY}
-            stroke={parseFloat(activeCoin.changePercent24Hr) >= 0 ? '#10b981' : '#f43f5e'}
-            strokeWidth="1.2"
-            strokeDasharray="2 3"
-            opacity="0.9"
-          />
-          
-          {/* Price Tag Y Axis Label */}
-          <rect
-            x={marginOffset.left + chartWidth + 2}
-            y={currentPriceY - 7.5}
-            width={70}
-            height={15}
-            rx={3}
-            fill={parseFloat(activeCoin.changePercent24Hr) >= 0 ? '#10b981' : '#f43f5e'}
-            className="animate-pulse"
-          />
-          <text
-            x={marginOffset.left + chartWidth + 37}
-            y={currentPriceY + 3.5}
-            fill="#020617"
-            fontSize="9"
-            fontWeight="bold"
-            fontFamily="monospace"
-            textAnchor="middle"
-          >
-            {priceFormat(currentPrice)}
-          </text>
+          {!isNaN(currentPriceY) && isFinite(currentPriceY) && (
+            <>
+              <line
+                id="live-trend-grid-line"
+                x1={marginOffset.left}
+                y1={currentPriceY}
+                x2={marginOffset.left + chartWidth}
+                y2={currentPriceY}
+                stroke={parseFloat(activeCoin.changePercent24Hr) >= 0 ? '#10b981' : '#f43f5e'}
+                strokeWidth="1.2"
+                strokeDasharray="2 3"
+                opacity="0.9"
+              />
+              
+              {/* Price Tag Y Axis Label */}
+              <rect
+                x={marginOffset.left + chartWidth + 2}
+                y={currentPriceY - 7.5}
+                width={70}
+                height={15}
+                rx={3}
+                fill={parseFloat(activeCoin.changePercent24Hr) >= 0 ? '#10b981' : '#f43f5e'}
+                className="animate-pulse"
+              />
+              <text
+                x={marginOffset.left + chartWidth + 37}
+                y={currentPriceY + 3.5}
+                fill="#020617"
+                fontSize="9"
+                fontWeight="bold"
+                fontFamily="monospace"
+                textAnchor="middle"
+              >
+                {priceFormat(currentPrice)}
+              </text>
+            </>
+          )}
 
           {/* Candlesticks Layer */}
           {visibleCandles.map((candle, idx) => {
@@ -572,8 +621,9 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
 
               {/* Current actual indicator level line */}
               {(() => {
-                const rsiYPercent = (100 - rsiValue) / 100;
-                const rsiY = rsiYPercent * 45;
+                const checkedRsi = isNaN(rsiValue) ? 50 : rsiValue;
+                const rsiYPercent = (100 - checkedRsi) / 100;
+                const rsiY = isNaN(rsiYPercent) ? 22.5 : rsiYPercent * 45;
                 return (
                   <g id="g-rsi-live-point">
                     <line
@@ -625,16 +675,18 @@ export const ChartSection: React.FC<ChartSectionProps> = ({
                   {/* Floating mouse price badge on standard scale */}
                   {(() => {
                     const pixelsInside = marginOffset.top + mainChartHeight - mouseY;
-                    const computedCrossPrice = priceRange.min + (pixelsInside / mainChartHeight) * priceRange.delta;
+                    const delta = priceRange.delta || 100;
+                    const min = priceRange.min || 100;
+                    const computedCrossPrice = min + (pixelsInside / mainChartHeight) * delta;
                     return (
                       <g id="g-cross-price-tag">
                         <rect
-                          x={marginOffset.left + chartWidth + 2}
-                          y={mouseY - 7}
-                          width={75}
-                          height={14}
-                          rx={3}
-                          fill="#334155"
+                           x={marginOffset.left + chartWidth + 2}
+                           y={mouseY - 7}
+                           width={75}
+                           height={14}
+                           rx={3}
+                           fill="#334155"
                         />
                         <text
                           x={marginOffset.left + chartWidth + 39}

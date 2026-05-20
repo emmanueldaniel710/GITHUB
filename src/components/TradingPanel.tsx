@@ -29,12 +29,13 @@ export const TradingPanel: React.FC<TradingPanelProps> = ({
   const [orderType, setOrderType] = useState<'market' | 'limit'>('market');
   const [limitPriceInput, setLimitPriceInput] = useState<string>('');
   
-  const [marginInput, setMarginInput] = useState<string>('500');
+  const [marginInput, setMarginInput] = useState<string>('50');
   const [leverage, setLeverage] = useState<number>(10);
   
   const [useSlTp, setUseSlTp] = useState<boolean>(false);
   const [tpInput, setTpInput] = useState<string>('');
   const [slInput, setSlInput] = useState<string>('');
+  const [eduOpen, setEduOpen] = useState<boolean>(true);
   
   const currentPrice = parseFloat(activeCoin.priceUsd) || 0;
 
@@ -102,7 +103,7 @@ export const TradingPanel: React.FC<TradingPanelProps> = ({
   };
 
   return (
-    <div id="trading-card-form" className="bg-[#121214] border border-zinc-800 rounded-xl p-4 flex flex-col md:w-[320px] shrink-0 text-zinc-100 shadow-lg select-none gap-4">
+    <div id="trading-card-form" className="bg-[#121214] border border-zinc-800 rounded-xl p-4 flex flex-col w-full shrink-0 text-zinc-100 shadow-lg select-none gap-4">
       {/* Long/Short Tab Buttons */}
       <div id="trade-tabs" className="grid grid-cols-2 p-1 bg-[#0a0a0b] border border-zinc-850 rounded-xl">
         <button
@@ -333,6 +334,66 @@ export const TradingPanel: React.FC<TradingPanelProps> = ({
           Open {tradeType === 'long' ? 'Buy / Long' : 'Sell / Short'}
         </button>
       </form>
+
+      {/* 💡 Trader Education Guide Accordion */}
+      <div id="trader-education-accordion" className="mt-2 border-t border-zinc-850 pt-4 flex flex-col gap-2">
+        <button
+          type="button"
+          onClick={() => setEduOpen(!eduOpen)}
+          className="w-full text-left flex items-center justify-between text-xs font-bold text-indigo-400 hover:text-indigo-300 transition uppercase tracking-wider font-sans cursor-pointer"
+        >
+          <span className="flex items-center gap-1.5">
+            <span>💡</span> Trader Education Guide
+          </span>
+          <span className="font-mono text-[9px] bg-[#0a0a0b] border border-zinc-800 text-zinc-400 px-1.5 py-0.5 rounded font-bold">
+            {eduOpen ? 'HIDE' : 'LEARN'}
+          </span>
+        </button>
+
+        {eduOpen && (
+          <div className="flex flex-col gap-3 text-[11px] text-zinc-400 mt-1 font-sans leading-relaxed animate-fade-in">
+            {/* Long vs Short */}
+            <div className="bg-[#0a0a0b]/80 rounded-lg p-3 border border-zinc-850 flex flex-col gap-2">
+              <div className="font-bold text-zinc-200 flex items-center gap-1 text-[11px]">
+                <span className="text-emerald-400">Buy / Long</span>
+                <span className="text-zinc-600 font-medium">vs</span>
+                <span className="text-rose-400">Sell / Short</span>
+              </div>
+              <p className="text-zinc-400 leading-normal">
+                <span className="text-emerald-400 font-semibold uppercase text-[9px]">Buy / Long:</span> Profit when asset prices <strong className="text-zinc-200">climb</strong>. You close to buy back your initial deposit, keeping the cash gains!
+              </p>
+              <p className="text-zinc-400 leading-normal">
+                <span className="text-rose-400 font-semibold uppercase text-[9px]">Sell / Short:</span> Profit when asset prices <strong className="text-zinc-200">drop</strong>! You borrow and sell high first, planning to purchase back cheaper later. You pocket the difference as profit.
+              </p>
+            </div>
+
+            {/* How Leverage Works */}
+            <div className="bg-[#0a0a0b]/80 rounded-lg p-3 border border-zinc-850 flex flex-col gap-1.5">
+              <div className="font-bold text-zinc-250 flex items-center gap-1">
+                <span>📈</span>
+                <span>Leverage Mechanics</span>
+              </div>
+              <p className="text-zinc-400 leading-normal">
+                Lets you multiply your trade size to maximize returns. At <span className="text-amber-500 font-bold">10x leverage</span>, a <strong className="text-zinc-200">$20 collateral</strong> gets you a <strong className="text-zinc-200">$200 position shape</strong>.
+              </p>
+              <div className="text-[10px] text-rose-450 border border-rose-950/40 bg-rose-950/10 p-1.5 rounded leading-snug">
+                ⚠️ <strong className="font-bold">Risk warning:</strong> Gains are calculated on the $200 size, but losses are as well! Moving 9.5% against your trade wiped your $20 deposit entirely (Liquidation).
+              </div>
+            </div>
+
+            {/* Liquidation explained */}
+            <div className="bg-[#0a0a0b]/80 rounded-lg p-3 border border-zinc-850 flex flex-col gap-1.5">
+              <div className="font-bold text-zinc-250 flex items-center gap-1">
+                <span>🛡️</span>
+                <span>Margin & Liquidation</span>
+              </div>
+              <p className="text-zinc-400 leading-normal">
+                If the market moves against you and your losses equal your deposit, the system automatically triggers a <strong className="text-rose-400">Forced Liquidation</strong> to prevent negative account balances.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
