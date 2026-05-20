@@ -1,0 +1,6 @@
+{
+  "name": "Live Crypto Margin Trading Simulator",
+  "description": "A high-fidelity real-time crypto margin trading platform simulator with actual market data, live leverage and liquidation mechanics, dynamic charts, order books, and an integrated, pro-grade AI technical market analyst powered by Gemini.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
